@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from .models import db, User
 from .services.ml_service import predictor
 from .services.company_service import recommender
-from .services.llm_service import gemini_service
+from .services.ai_engine import ai_service
 
 api_bp = Blueprint('api', __name__)
 
@@ -94,7 +94,7 @@ def analyze_skill_gap():
     if not user:
         return jsonify({"status": "error", "message": "User not found"}), 404
     
-    analysis = gemini_service.analyze_skill_gap(user)
+    analysis = ai_service.analyze_skill_gap(user)
     
     return jsonify({
         "status": "success",
@@ -115,10 +115,10 @@ def generate_roadmap():
         return jsonify({"status": "error", "message": "User not found"}), 404
 
     # First, get skill gap to supply the roadmap generator
-    skill_gap_data = gemini_service.analyze_skill_gap(user)
+    skill_gap_data = ai_service.analyze_skill_gap(user)
     missing_skills = skill_gap_data.get("missing_skills", [])
 
-    roadmap = gemini_service.generate_roadmap(user, missing_skills)
+    roadmap = ai_service.generate_roadmap(user, missing_skills)
     
     return jsonify({
         "status": "success",
@@ -148,7 +148,7 @@ def get_dashboard():
         
     prediction = predictor.predict_placement_probability(user)
     companies = recommender.recommend(user)
-    skill_gap = gemini_service.analyze_skill_gap(user)
+    skill_gap = ai_service.analyze_skill_gap(user)
     
     return jsonify({
         "status": "success",

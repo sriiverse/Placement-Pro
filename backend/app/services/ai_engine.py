@@ -97,4 +97,4 @@ class NeuroSymbolicService:
         return roadmap[:12]
 
 # Maintain the exported variable name to not break routes.py
-gemini_service = NeuroSymbolicService()
+ai_service = NeuroSymbolicService()

@@ -1,6 +1,6 @@
 # 🚀 PLACEMENT PRO+
 
-### The Offline Neuro-Symbolic AI Career Intelligence Platform
+### Hybrid Neuro-Symbolic AI System for Personalized Career Roadmap Generation
 
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.x-000000?style=for-the-badge&logo=flask&logoColor=white)
