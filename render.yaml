@@ -1,0 +1,24 @@
+services:
+  # Base web service for the Flask backend
+  - type: web
+    name: placementpro-backend
+    env: python
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "cd backend && gunicorn run:app --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.12.0
+
+  # Static site for the React Vite frontend
+  - type: web
+    name: placementpro-frontend
+    env: static
+    buildCommand: "cd frontend && npm install && npm run build"
+    staticPublishPath: "./frontend/dist"
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: VITE_API_URL
+        value: "https://placementpro-backend.onrender.com"

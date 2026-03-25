@@ -62,7 +62,7 @@ export default function ProfileForm() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto h-full flex flex-col font-mono text-gray-300">
+    <div className="max-w-4xl mx-auto min-h-full flex flex-col font-mono text-gray-300">
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -138,7 +138,7 @@ export default function ProfileForm() {
           <span className="ml-4 text-xs text-gray-500">root@placement-os:~# ./config_user.sh</span>
         </div>
         
-        <form className="space-y-8" onSubmit={(e) => e.preventDefault()}>
+        <form className="space-y-8 pb-6" onSubmit={(e) => e.preventDefault()}>
           <AnimatePresence mode="wait">
             {activeStep === 1 && (
               <motion.div
@@ -285,7 +285,7 @@ export default function ProfileForm() {
             )}
           </AnimatePresence>
 
-          <div className="pt-8 mt-12 flex justify-between border-t border-gray-800">
+          <div className="pt-8 mt-12 pb-2 mb-2 flex justify-between border-t border-gray-800">
             <button
               type="button"
               onClick={() => setActiveStep(Math.max(1, activeStep - 1))}

@@ -141,6 +141,11 @@ def get_dashboard():
         return jsonify({"status": "error", "message": "User not found"}), 404
     
     # Gather all data
+    # Scenario testing: Apply simulated skills if provided
+    simulated_skills = data.get('simulated_skills')
+    if simulated_skills is not None:
+        user.skills = simulated_skills
+        
     prediction = predictor.predict_placement_probability(user)
     companies = recommender.recommend(user)
     skill_gap = gemini_service.analyze_skill_gap(user)

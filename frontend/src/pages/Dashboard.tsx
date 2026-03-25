@@ -3,8 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Target, Cpu, Activity, ShieldAlert, Crosshair, 
   ChevronRight, Zap, Lock, Map, TrendingUp,
-  AlertTriangle, CheckCircle, Clock, Building2, Loader2
+  AlertTriangle, CheckCircle, Clock, Building2, Loader2, Plus
 } from 'lucide-react';
+import { 
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid
+} from 'recharts';
 import axios from 'axios';
 import { cn } from '../lib/utils';
 
@@ -50,6 +54,8 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [roadmapLoading, setRoadmapLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [simulatedSkills, setSimulatedSkills] = useState<string[]>([]);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   useEffect(() => {
     const userId = localStorage.getItem('user_id');
@@ -81,8 +87,48 @@ export default function Dashboard() {
     }
   };
 
+  const runSimulation = (newSkill: string) => {
+    const userId = localStorage.getItem('user_id');
+    if (!userId) return;
+    setIsSimulating(true);
+    
+    // Add new skill to simulated skills
+    const updatedSkills = [...simulatedSkills, newSkill];
+    setSimulatedSkills(updatedSkills);
+    
+    // Combine original profile skills with simulated ones
+    const baseSkills = data?.profile?.skills ? data.profile.skills.split(',').map((s: string) => s.trim()) : [];
+    const combinedSkills = Array.from(new Set([...baseSkills, ...updatedSkills])).join(',');
+
+    axios.post(`${API}/dashboard`, { user_id: parseInt(userId), simulated_skills: combinedSkills })
+      .then(res => {
+        if (res.data.status === 'success') {
+          setData(prev => prev ? {
+            ...prev,
+            prediction: res.data.prediction,
+            companies: res.data.companies,
+            skill_gap: res.data.skill_gap
+          } : null);
+        }
+      })
+      .catch(err => console.error('Simulation error:', err))
+      .finally(() => setIsSimulating(false));
+  };
+
   const prob = data?.prediction?.probability ?? 0;
   const dashOffset = 283 * (1 - prob / 100);
+
+  const trendData = Array.from({ length: 12 }, (_, i) => {
+    const w = i + 1;
+    const currentProb = data?.prediction?.probability || 50;
+    const growth = (95 - currentProb) * (w / 12);
+    return { week: `W${w}`, probability: Math.round(currentProb + growth) };
+  });
+
+  const radarData = [
+    ...(data?.skill_gap?.strengths || []).map(s => ({ subject: s, score: 90, fullMark: 100 })),
+    ...(data?.skill_gap?.missing_skills || []).map(s => ({ subject: s, score: 30, fullMark: 100 }))
+  ].slice(0, 6);
 
   if (isLoading) {
     return (
@@ -138,6 +184,15 @@ export default function Dashboard() {
             <Cpu className="w-4 h-4" />
             INIT_ROADMAP()
           </motion.button>
+          {simulatedSkills.length > 0 && (
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="border border-neon-pink bg-neon-pink/10 text-neon-pink px-4 py-2 text-xs flex items-center shadow-[0_0_10px_rgba(255,0,255,0.2)]"
+            >
+              <Activity className="w-4 h-4 mr-2" />
+              SIMULATION_ACTIVE ({simulatedSkills.length})
+            </motion.div>
+          )}
         </div>
       </div>
 
@@ -248,6 +303,26 @@ export default function Dashboard() {
                   </motion.div>
                 );
               })}
+              {/* Probability Trend */}
+              <div className="cyber-panel p-4 flex-1 relative">
+                <div className="cyber-brackets" />
+                <p className="text-[10px] text-gray-500 tracking-widest mb-1">&gt; 12W_PROBABILITY_PROJECTION</p>
+                <div className="h-[90px] w-full mt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+                      <XAxis dataKey="week" stroke="#4b5563" fontSize={9} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#4b5563" fontSize={9} tickLine={false} axisLine={false} domain={['dataMin - 10', 100]} hide />
+                      <RechartsTooltip 
+                        contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid #00f3ff', borderRadius: '0' }}
+                        itemStyle={{ color: '#00f3ff', fontSize: '10px' }}
+                        labelStyle={{ color: '#9ca3af', fontSize: '10px' }}
+                      />
+                      <Line type="monotone" dataKey="probability" stroke="#00f3ff" strokeWidth={2} dot={{ r: 2, fill: '#00f3ff' }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
               {/* Key Factors */}
               <div className="cyber-panel p-4 flex-1 relative">
                 <div className="cyber-brackets" />
@@ -342,7 +417,7 @@ export default function Dashboard() {
             exit={{ opacity: 0, y: -20 }}
             className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6"
           >
-            {/* Summary + Strengths */}
+            {/* Summary + Strengths + Radar */}
             <div className="space-y-4">
               <div className="cyber-panel p-6 relative">
                 <div className="cyber-brackets" />
@@ -356,6 +431,20 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
+              
+              <div className="cyber-panel p-6 relative h-[250px] flex flex-col justify-center">
+                <div className="cyber-brackets" />
+                <h3 className="text-neon-cyan tracking-widest text-xs mb-2 absolute top-4 left-6">&gt; SKILL_RADAR</h3>
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
+                    <PolarGrid stroke="#1f2937" />
+                    <PolarAngleAxis dataKey="subject" stroke="#9ca3af" fontSize={10} />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                    <Radar name="Candidate" dataKey="score" stroke="#b537f2" fill="#b537f2" fillOpacity={0.3} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+
               <div className="cyber-panel p-6 relative">
                 <div className="cyber-brackets" />
                 <h3 className="text-neon-purple tracking-widest text-xs mb-4 border-b border-neon-purple/20 pb-2">&gt; CURRENT.STRENGTHS</h3>
@@ -384,10 +473,19 @@ export default function Dashboard() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-bold text-white text-xs">{gap.skill}</span>
-                      <span className={cn(
-                        "text-[9px] px-2 py-0.5 border",
-                        gap.priority === 'HIGH' ? "text-neon-pink border-neon-pink/40" : "text-neon-purple border-neon-purple/40"
-                      )}>{gap.priority}</span>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => runSimulation(gap.skill)}
+                          disabled={isSimulating || simulatedSkills.includes(gap.skill)}
+                          className="flex items-center gap-1 text-[9px] border border-neon-cyan/40 text-neon-cyan px-2 hover:bg-neon-cyan/10 disabled:opacity-50 transition-all font-bold tracking-wider"
+                        >
+                          {simulatedSkills.includes(gap.skill) ? "SIMULATED" : <><Plus className="w-2 h-2" /> SIMULATE</>}
+                        </button>
+                        <span className={cn(
+                          "text-[9px] px-2 py-0.5 border flex items-center",
+                          gap.priority === 'HIGH' ? "text-neon-pink border-neon-pink/40" : "text-neon-purple border-neon-purple/40"
+                        )}>{gap.priority}</span>
+                      </div>
                     </div>
                     <p className="text-gray-400 text-xs mb-2">{gap.reason}</p>
                     <div className="flex flex-wrap gap-1">

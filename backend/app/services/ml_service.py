@@ -1,4 +1,4 @@
-import numpy as np
+import math
 
 class PlacementPredictor:
     def __init__(self):
@@ -53,7 +53,7 @@ class PlacementPredictor:
         shifted_score = raw_score - 4.5 
         
         # Sigmoid function for 0 to 1 mapping
-        probability = 1 / (1 + np.exp(-shifted_score))
+        probability = 1 / (1 + math.exp(-shifted_score))
         
         # Scale to percentage
         final_percentage = round(probability * 100, 2)

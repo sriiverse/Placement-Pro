@@ -1,0 +1,58 @@
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
+class VectorService:
+    def __init__(self, model_name='all-MiniLM-L6-v2'):
+        """
+        Initializes the Semantic Embedding model.
+        all-MiniLM-L6-v2 is an extremely fast ~80MB model perfect for CPU similarity tasks.
+        """
+        self.model = SentenceTransformer(model_name)
+    
+    def encode_skills(self, skills_list):
+        if not skills_list:
+            return []
+        return self.model.encode(skills_list)
+        
+    def _cosine_similarity(self, vec1, vec2):
+        dot_product = np.dot(vec1, vec2)
+        norm1 = np.linalg.norm(vec1)
+        norm2 = np.linalg.norm(vec2)
+        if norm1 == 0 or norm2 == 0:
+            return 0.0
+        return dot_product / (norm1 * norm2)
+
+    def map_user_skills_to_graph(self, user_skills, graph_nodes, threshold=0.60):
+        """
+        Takes messy user string array (e.g. ['some react stuff', 'db'])
+        and maps them to strict Graph Nodes (e.g. ['React', 'Databases'])
+        using Semantic Cosine Similarity.
+        """
+        if not user_skills or not graph_nodes:
+            return []
+            
+        # Encode graph nodes globally
+        node_embeddings = self.encode_skills(graph_nodes)
+        
+        mapped_skills = set()
+        
+        for user_skill in user_skills:
+            clean_skill = user_skill.strip()
+            if not clean_skill:
+                continue
+                
+            user_embedding = self.model.encode([clean_skill])[0]
+            
+            best_match = None
+            best_score = -1
+            
+            for idx, node_name in enumerate(graph_nodes):
+                score = self._cosine_similarity(user_embedding, node_embeddings[idx])
+                if score > best_score:
+                    best_score = score
+                    best_match = node_name
+                    
+            if best_score >= threshold and best_match:
+                mapped_skills.add(best_match)
+                
+        return list(mapped_skills)
