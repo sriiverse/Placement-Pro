@@ -45,7 +45,8 @@ export default function ProfileForm() {
         skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean)
       };
 
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/submit-profile`, processedData);
+      const baseUrl = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '');
+      const response = await axios.post(`${baseUrl}/api/submit-profile`, processedData);
       
       if (response.data && response.data.user_id) {
         localStorage.setItem('user_id', response.data.user_id.toString());

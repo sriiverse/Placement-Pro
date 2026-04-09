@@ -12,7 +12,7 @@ import {
 import axios from 'axios';
 import { cn } from '../lib/utils';
 
-const API = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') + '/api';
 
 interface DashboardData {
   profile: any;
