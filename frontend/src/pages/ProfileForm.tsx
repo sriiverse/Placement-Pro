@@ -32,34 +32,42 @@ export default function ProfileForm() {
     const { name, value } = e.target;
     
     let filteredValue = value;
+    const newWarnings = { ...warnings };
+
     if (['full_name', 'target_designation', 'branch'].includes(name)) {
-      filteredValue = value.replace(/[\d]/g, ''); // Strip numbers
+      const invalidRegex = /[^a-zA-Z\s\-]/;
+      if (invalidRegex.test(value)) {
+        newWarnings[name] = 'WARNING: Blocked invalid chars. Alphabets & Spaces only.';
+      } else {
+        delete newWarnings[name];
+      }
+      filteredValue = value.replace(/[^a-zA-Z\s\-]/g, '');
     } else if (['internships_count', 'projects_count'].includes(name)) {
-      filteredValue = value.replace(/[^\d]/g, ''); // Strip non-numbers
+      const invalidRegex = /[^\d]/;
+      if (invalidRegex.test(value)) {
+        newWarnings[name] = 'WARNING: Blocked invalid chars. Numeric integers only.';
+      } else {
+        delete newWarnings[name];
+      }
+      filteredValue = value.replace(/[^\d]/g, '');
     } else if (name === 'cgpa') {
-      filteredValue = value.replace(/[^\d.]/g, ''); // Allow only digits and decimal
+      const invalidRegex = /[^\d.]/;
+      if (invalidRegex.test(value)) {
+        newWarnings[name] = 'WARNING: Blocked invalid chars. Decimals only.';
+      } else {
+        delete newWarnings[name];
+      }
+      filteredValue = value.replace(/[^\d.]/g, '');
       const parts = filteredValue.split('.');
       if (parts.length > 2) {
         filteredValue = parts[0] + '.' + parts.slice(1).join('');
       }
+    } else {
+      // Skills and other fields
+      filteredValue = value;
     }
     
     setFormData({ ...formData, [name]: filteredValue });
-
-    const newWarnings = { ...warnings };
-    if (['full_name', 'target_designation', 'branch'].includes(name)) {
-      if (/\d/.test(value)) {
-        newWarnings[name] = 'WARNING: Digits blocked. Alphabetic only.';
-      } else {
-        delete newWarnings[name];
-      }
-    } else if (['cgpa', 'internships_count', 'projects_count'].includes(name)) {
-      if (/[a-zA-Z]/.test(value)) {
-        newWarnings[name] = 'WARNING: Alphabets blocked. Numeric only.';
-      } else {
-        delete newWarnings[name];
-      }
-    }
     setWarnings(newWarnings);
   };
 
