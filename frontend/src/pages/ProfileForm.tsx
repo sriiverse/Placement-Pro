@@ -14,6 +14,7 @@ const steps = [
 export default function ProfileForm() {
   const [activeStep, setActiveStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [warnings, setWarnings] = useState<Record<string, string>>({});
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -28,7 +29,24 @@ export default function ProfileForm() {
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    const newWarnings = { ...warnings };
+    if (name === 'full_name') {
+      if (/\d/.test(value)) {
+        newWarnings[name] = 'WARNING: Digits detected. Name should be alphabetic.';
+      } else {
+        delete newWarnings[name];
+      }
+    } else if (['cgpa', 'internships_count', 'projects_count'].includes(name)) {
+      if (/[a-zA-Z]/.test(value)) {
+        newWarnings[name] = 'WARNING: Alphabetic characters detected. Numeric input only.';
+      } else {
+        delete newWarnings[name];
+      }
+    }
+    setWarnings(newWarnings);
   };
 
   const handleSubmit = async () => {
@@ -161,6 +179,7 @@ export default function ProfileForm() {
                     className="w-full bg-black/50 border border-gray-800 focus:border-neon-cyan px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] focus:shadow-[0_0_15px_rgba(0,243,255,0.2)]"
                     placeholder="Enter string value..."
                   />
+                  {warnings.full_name && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {warnings.full_name}</p>}
                 </div>
                 <div className="space-y-2 group">
                   <label className="text-xs text-neon-cyan tracking-widest block group-focus-within:text-glow-cyan transition-all">
@@ -192,14 +211,15 @@ export default function ProfileForm() {
                       &gt; METRIC.CGPA
                     </label>
                     <input 
-                      type="number" 
-                      step="0.01"
+                      type="text" 
+                      inputMode="decimal"
                       name="cgpa"
                       value={formData.cgpa}
                       onChange={handleChange}
                       className="w-full bg-black/50 border border-gray-800 focus:border-neon-purple px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(181,55,242,0.2)]"
                       placeholder="Float value (0.00-10.00)"
                     />
+                    {warnings.cgpa && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {warnings.cgpa}</p>}
                   </div>
                   <div className="space-y-2 group">
                     <label className="text-xs text-neon-purple tracking-widest block group-focus-within:text-glow-purple transition-all">
@@ -260,26 +280,30 @@ export default function ProfileForm() {
                       &gt; COUNT.INTERNSHIPS
                     </label>
                     <input 
-                      type="number" 
+                      type="text" 
+                      inputMode="numeric"
                       name="internships_count"
                       value={formData.internships_count}
                       onChange={handleChange}
                       className="w-full bg-black/50 border border-gray-800 focus:border-neon-pink px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(241,44,138,0.2)]"
                       placeholder="Int >= 0"
                     />
+                    {warnings.internships_count && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {warnings.internships_count}</p>}
                   </div>
                   <div className="space-y-2 group">
                     <label className="text-xs text-neon-pink tracking-widest block transition-all">
                       &gt; COUNT.PROJECTS
                     </label>
                     <input 
-                      type="number" 
+                      type="text" 
+                      inputMode="numeric"
                       name="projects_count"
                       value={formData.projects_count}
                       onChange={handleChange}
                       className="w-full bg-black/50 border border-gray-800 focus:border-neon-pink px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(241,44,138,0.2)]"
                       placeholder="Int >= 0"
                     />
+                    {warnings.projects_count && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {warnings.projects_count}</p>}
                   </div>
                 </div>
               </motion.div>

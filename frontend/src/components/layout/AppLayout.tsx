@@ -22,18 +22,15 @@ export default function AppLayout() {
         
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">
           <div className="max-w-[1600px] mx-auto h-full">
-            <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
-                initial={{ opacity: 0, scale: 0.98, filter: 'blur(5px)' }}
-                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, scale: 1.02, filter: 'blur(5px)' }}
+                initial={{ opacity: 0, filter: 'blur(5px)' }}
+                animate={{ opacity: 1, filter: 'blur(0px)' }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className="h-full"
               >
                 <Outlet />
               </motion.div>
-            </AnimatePresence>
           </div>
         </main>
 
