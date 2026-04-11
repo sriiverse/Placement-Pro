@@ -14,9 +14,6 @@ const steps = [
 export default function ProfileForm() {
   const [activeStep, setActiveStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [warnings, setWarnings] = useState<Record<string, string>>({});
-  const navigate = useNavigate();
-
   const [formData, setFormData] = useState({
     full_name: '',
     target_designation: '',
@@ -28,47 +25,28 @@ export default function ProfileForm() {
     projects_count: ''
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    
-    let filteredValue = value;
-    const newWarnings = { ...warnings };
+  const getWarnings = () => {
+    const w: Record<string, string> = {};
+    if (/[^a-zA-Z\s\-]/.test(formData.full_name) && formData.full_name) w.full_name = 'ALPHABETS ONLY';
+    if (/[^a-zA-Z\s\-]/.test(formData.target_designation) && formData.target_designation) w.target_designation = 'ALPHABETS ONLY';
+    if (/[^a-zA-Z\s\-]/.test(formData.branch) && formData.branch) w.branch = 'ALPHABETS ONLY';
+    if (/[^\d.]/.test(formData.cgpa) && formData.cgpa) w.cgpa = 'DECIMAL NUMBER ONLY';
+    if (/[^\d]/.test(formData.internships_count) && formData.internships_count) w.internships_count = 'INTEGER DIGITS ONLY';
+    if (/[^\d]/.test(formData.projects_count) && formData.projects_count) w.projects_count = 'INTEGER DIGITS ONLY';
+    return w;
+  };
 
-    if (['full_name', 'target_designation', 'branch'].includes(name)) {
-      const invalidRegex = /[^a-zA-Z\s\-]/;
-      if (invalidRegex.test(value)) {
-        newWarnings[name] = 'WARNING: Blocked invalid chars. Alphabets & Spaces only.';
-      } else {
-        delete newWarnings[name];
-      }
-      filteredValue = value.replace(/[^a-zA-Z\s\-]/g, '');
-    } else if (['internships_count', 'projects_count'].includes(name)) {
-      const invalidRegex = /[^\d]/;
-      if (invalidRegex.test(value)) {
-        newWarnings[name] = 'WARNING: Blocked invalid chars. Numeric integers only.';
-      } else {
-        delete newWarnings[name];
-      }
-      filteredValue = value.replace(/[^\d]/g, '');
-    } else if (name === 'cgpa') {
-      const invalidRegex = /[^\d.]/;
-      if (invalidRegex.test(value)) {
-        newWarnings[name] = 'WARNING: Blocked invalid chars. Decimals only.';
-      } else {
-        delete newWarnings[name];
-      }
-      filteredValue = value.replace(/[^\d.]/g, '');
-      const parts = filteredValue.split('.');
-      if (parts.length > 2) {
-        filteredValue = parts[0] + '.' + parts.slice(1).join('');
-      }
-    } else {
-      // Skills and other fields
-      filteredValue = value;
-    }
-    
-    setFormData({ ...formData, [name]: filteredValue });
-    setWarnings(newWarnings);
+  const activeWarnings = getWarnings();
+
+  const isStepValid = () => {
+    if (activeStep === 1) return formData.full_name && formData.target_designation && !activeWarnings.full_name && !activeWarnings.target_designation;
+    if (activeStep === 2) return formData.cgpa && formData.branch && !activeWarnings.cgpa && !activeWarnings.branch;
+    if (activeStep === 3) return formData.skills && formData.internships_count && formData.projects_count && !activeWarnings.internships_count && !activeWarnings.projects_count;
+    return false;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async () => {
@@ -85,7 +63,7 @@ export default function ProfileForm() {
         skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean)
       };
 
-      const baseUrl = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '');
+      const baseUrl = (import.meta.env.VITE_API_URL || 'https://vamsi25-placement-os.hf.space').replace(/\/api\/?$/, '');
       const response = await axios.post(`${baseUrl}/api/submit-profile`, processedData);
       
       if (response.data && response.data.user_id) {
@@ -201,7 +179,7 @@ export default function ProfileForm() {
                     className="w-full bg-black/50 border border-gray-800 focus:border-neon-cyan px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] focus:shadow-[0_0_15px_rgba(0,243,255,0.2)]"
                     placeholder="Enter string value..."
                   />
-                  {warnings.full_name && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {warnings.full_name}</p>}
+                  {activeWarnings.full_name && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {activeWarnings.full_name}</p>}
                 </div>
                 <div className="space-y-2 group">
                   <label className="text-xs text-neon-cyan tracking-widest block group-focus-within:text-glow-cyan transition-all">
@@ -215,7 +193,7 @@ export default function ProfileForm() {
                     className="w-full bg-black/50 border border-gray-800 focus:border-neon-cyan px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] focus:shadow-[0_0_15px_rgba(0,243,255,0.2)]"
                     placeholder="e.g., Software_Engineer"
                   />
-                  {warnings.target_designation && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {warnings.target_designation}</p>}
+                  {activeWarnings.target_designation && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {activeWarnings.target_designation}</p>}
                 </div>
               </motion.div>
             )}
@@ -242,7 +220,7 @@ export default function ProfileForm() {
                       className="w-full bg-black/50 border border-gray-800 focus:border-neon-purple px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(181,55,242,0.2)]"
                       placeholder="Float value (0.00-10.00)"
                     />
-                    {warnings.cgpa && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {warnings.cgpa}</p>}
+                    {activeWarnings.cgpa && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {activeWarnings.cgpa}</p>}
                   </div>
                   <div className="space-y-2 group">
                     <label className="text-xs text-neon-purple tracking-widest block group-focus-within:text-glow-purple transition-all">
@@ -272,7 +250,7 @@ export default function ProfileForm() {
                     className="w-full bg-black/50 border border-gray-800 focus:border-neon-purple px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(181,55,242,0.2)]"
                     placeholder="e.g., Computer_Science"
                   />
-                  {warnings.branch && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {warnings.branch}</p>}
+                  {activeWarnings.branch && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {activeWarnings.branch}</p>}
                 </div>
               </motion.div>
             )}
@@ -312,7 +290,7 @@ export default function ProfileForm() {
                       className="w-full bg-black/50 border border-gray-800 focus:border-neon-pink px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(241,44,138,0.2)]"
                       placeholder="Int >= 0"
                     />
-                    {warnings.internships_count && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {warnings.internships_count}</p>}
+                    {activeWarnings.internships_count && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {activeWarnings.internships_count}</p>}
                   </div>
                   <div className="space-y-2 group">
                     <label className="text-xs text-neon-pink tracking-widest block transition-all">
@@ -327,7 +305,7 @@ export default function ProfileForm() {
                       className="w-full bg-black/50 border border-gray-800 focus:border-neon-pink px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(241,44,138,0.2)]"
                       placeholder="Int >= 0"
                     />
-                    {warnings.projects_count && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {warnings.projects_count}</p>}
+                    {activeWarnings.projects_count && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {activeWarnings.projects_count}</p>}
                   </div>
                 </div>
               </motion.div>
@@ -351,7 +329,7 @@ export default function ProfileForm() {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={isSubmitting || Object.keys(warnings).length > 0}
+              disabled={isSubmitting || !isStepValid()}
               className="group relative border border-neon-cyan bg-neon-cyan/10 hover:bg-neon-cyan/20 text-neon-cyan px-8 py-2 uppercase tracking-widest text-xs transition-all duration-300 flex items-center gap-3 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="absolute inset-0 w-full h-full bg-neon-cyan/20 -translate-x-full group-hover:animate-[scanline_1s_ease-in-out]" />
