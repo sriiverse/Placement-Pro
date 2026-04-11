@@ -14,6 +14,8 @@ const steps = [
 export default function ProfileForm() {
   const [activeStep, setActiveStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     full_name: '',
     target_designation: '',
@@ -25,39 +27,73 @@ export default function ProfileForm() {
     projects_count: ''
   });
 
-  const getWarnings = () => {
-    const w: Record<string, string> = {};
-    if (/[^a-zA-Z\s\-]/.test(formData.full_name) && formData.full_name) w.full_name = 'ALPHABETS ONLY';
-    if (/[^a-zA-Z\s\-]/.test(formData.target_designation) && formData.target_designation) w.target_designation = 'ALPHABETS ONLY';
-    if (/[^a-zA-Z\s\-]/.test(formData.branch) && formData.branch) w.branch = 'ALPHABETS ONLY';
-    if (/[^\d.]/.test(formData.cgpa) && formData.cgpa) w.cgpa = 'DECIMAL NUMBER ONLY';
-    if (/[^\d]/.test(formData.internships_count) && formData.internships_count) w.internships_count = 'INTEGER DIGITS ONLY';
-    if (/[^\d]/.test(formData.projects_count) && formData.projects_count) w.projects_count = 'INTEGER DIGITS ONLY';
-    return w;
+  const handleAlphaKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key.length === 1 && /[^a-zA-Z\s\-]/.test(e.key)) {
+      e.preventDefault();
+    }
   };
 
-  const activeWarnings = getWarnings();
+  const handleDigitKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key.length === 1 && /[^\d]/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
 
-  const isStepValid = () => {
-    if (activeStep === 1) return formData.full_name && formData.target_designation && !activeWarnings.full_name && !activeWarnings.target_designation;
-    if (activeStep === 2) return formData.cgpa && formData.branch && !activeWarnings.cgpa && !activeWarnings.branch;
-    if (activeStep === 3) return formData.skills && formData.internships_count && formData.projects_count && !activeWarnings.internships_count && !activeWarnings.projects_count;
-    return false;
+  const handleDecimalKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key.length === 1 && /[^\d.]/.test(e.key)) {
+      e.preventDefault();
+    }
+    if (e.key === '.' && formData.cgpa.includes('.')) {
+      e.preventDefault();
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async () => {
-    if (activeStep < steps.length) {
-      setActiveStep(activeStep + 1);
+  const handleNext = () => {
+    if (activeStep === 1) {
+      if (!formData.full_name || formData.full_name.trim() === '' || /[^a-zA-Z\s\-]/.test(formData.full_name)) {
+        alert("Invalid SYSTEM_USER input. Alphabets only allowed.");
+        return;
+      }
+      if (!formData.target_designation || formData.target_designation.trim() === '' || /[^a-zA-Z\s\-]/.test(formData.target_designation)) {
+        alert("Invalid Target Designation input. Alphabets only allowed.");
+        return;
+      }
+    } else if (activeStep === 2) {
+      const cgpaVal = parseFloat(formData.cgpa);
+      if (!formData.cgpa || /[^\d.]/.test(formData.cgpa) || isNaN(cgpaVal) || cgpaVal < 0 || cgpaVal > 10) {
+        alert("Invalid CGPA input. CGPA must be a decimal value strictly between 0 and 10.");
+        return;
+      }
+      if (!formData.branch || formData.branch.trim() === '' || /[^a-zA-Z\s\-]/.test(formData.branch)) {
+        alert("Invalid Branch input. Alphabets only allowed.");
+        return;
+      }
+    } else if (activeStep === 3) {
+      if (!formData.skills || formData.skills.trim() === '') {
+        alert("Invalid Skills input. Must provide at least one skill.");
+        return;
+      }
+      if (!formData.internships_count || /[^\d]/.test(formData.internships_count) || parseInt(formData.internships_count) < 0) {
+        alert("Invalid Internships count. Digits only allowed.");
+        return;
+      }
+      if (!formData.projects_count || /[^\d]/.test(formData.projects_count) || parseInt(formData.projects_count) < 0) {
+        alert("Invalid Projects count. Digits only allowed.");
+        return;
+      }
+      handleSubmit();
       return;
     }
+    setActiveStep(activeStep + 1);
+  };
 
+  const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Process skills into array, filter empty strings
       const processedData = {
         ...formData,
         skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean)
@@ -70,7 +106,6 @@ export default function ProfileForm() {
         localStorage.setItem('user_id', response.data.user_id.toString());
       }
       
-      // Navigate to dashboard on success
       navigate('/dashboard');
     } catch (error) {
       console.error('Failed to submit profile:', error);
@@ -176,10 +211,10 @@ export default function ProfileForm() {
                     name="full_name"
                     value={formData.full_name}
                     onChange={handleChange}
+                    onKeyDown={handleAlphaKeyDown}
                     className="w-full bg-black/50 border border-gray-800 focus:border-neon-cyan px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] focus:shadow-[0_0_15px_rgba(0,243,255,0.2)]"
-                    placeholder="Enter string value..."
+                    placeholder="Enter alphabets only..."
                   />
-                  {activeWarnings.full_name && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {activeWarnings.full_name}</p>}
                 </div>
                 <div className="space-y-2 group">
                   <label className="text-xs text-neon-cyan tracking-widest block group-focus-within:text-glow-cyan transition-all">
@@ -190,10 +225,10 @@ export default function ProfileForm() {
                     name="target_designation" 
                     value={formData.target_designation}
                     onChange={handleChange}
+                    onKeyDown={handleAlphaKeyDown}
                     className="w-full bg-black/50 border border-gray-800 focus:border-neon-cyan px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] focus:shadow-[0_0_15px_rgba(0,243,255,0.2)]"
-                    placeholder="e.g., Software_Engineer"
+                    placeholder="e.g. Software Engineer"
                   />
-                  {activeWarnings.target_designation && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {activeWarnings.target_designation}</p>}
                 </div>
               </motion.div>
             )}
@@ -217,10 +252,10 @@ export default function ProfileForm() {
                       name="cgpa"
                       value={formData.cgpa}
                       onChange={handleChange}
+                      onKeyDown={handleDecimalKeyDown}
                       className="w-full bg-black/50 border border-gray-800 focus:border-neon-purple px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(181,55,242,0.2)]"
-                      placeholder="Float value (0.00-10.00)"
+                      placeholder="e.g. 8.5 (Max 10)"
                     />
-                    {activeWarnings.cgpa && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {activeWarnings.cgpa}</p>}
                   </div>
                   <div className="space-y-2 group">
                     <label className="text-xs text-neon-purple tracking-widest block group-focus-within:text-glow-purple transition-all">
@@ -247,10 +282,10 @@ export default function ProfileForm() {
                     name="branch"
                     value={formData.branch}
                     onChange={handleChange}
+                    onKeyDown={handleAlphaKeyDown}
                     className="w-full bg-black/50 border border-gray-800 focus:border-neon-purple px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(181,55,242,0.2)]"
-                    placeholder="e.g., Computer_Science"
+                    placeholder="e.g. Computer Science"
                   />
-                  {activeWarnings.branch && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {activeWarnings.branch}</p>}
                 </div>
               </motion.div>
             )}
@@ -287,10 +322,10 @@ export default function ProfileForm() {
                       name="internships_count"
                       value={formData.internships_count}
                       onChange={handleChange}
+                      onKeyDown={handleDigitKeyDown}
                       className="w-full bg-black/50 border border-gray-800 focus:border-neon-pink px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(241,44,138,0.2)]"
                       placeholder="Int >= 0"
                     />
-                    {activeWarnings.internships_count && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {activeWarnings.internships_count}</p>}
                   </div>
                   <div className="space-y-2 group">
                     <label className="text-xs text-neon-pink tracking-widest block transition-all">
@@ -302,10 +337,10 @@ export default function ProfileForm() {
                       name="projects_count"
                       value={formData.projects_count}
                       onChange={handleChange}
+                      onKeyDown={handleDigitKeyDown}
                       className="w-full bg-black/50 border border-gray-800 focus:border-neon-pink px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(241,44,138,0.2)]"
                       placeholder="Int >= 0"
                     />
-                    {activeWarnings.projects_count && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {activeWarnings.projects_count}</p>}
                   </div>
                 </div>
               </motion.div>
@@ -328,8 +363,8 @@ export default function ProfileForm() {
             
             <button
               type="button"
-              onClick={handleSubmit}
-              disabled={isSubmitting || !isStepValid()}
+              onClick={handleNext}
+              disabled={isSubmitting}
               className="group relative border border-neon-cyan bg-neon-cyan/10 hover:bg-neon-cyan/20 text-neon-cyan px-8 py-2 uppercase tracking-widest text-xs transition-all duration-300 flex items-center gap-3 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="absolute inset-0 w-full h-full bg-neon-cyan/20 -translate-x-full group-hover:animate-[scanline_1s_ease-in-out]" />
