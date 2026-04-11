@@ -30,18 +30,32 @@ export default function ProfileForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    
+    let filteredValue = value;
+    if (['full_name', 'target_designation', 'branch'].includes(name)) {
+      filteredValue = value.replace(/[\d]/g, ''); // Strip numbers
+    } else if (['internships_count', 'projects_count'].includes(name)) {
+      filteredValue = value.replace(/[^\d]/g, ''); // Strip non-numbers
+    } else if (name === 'cgpa') {
+      filteredValue = value.replace(/[^\d.]/g, ''); // Allow only digits and decimal
+      const parts = filteredValue.split('.');
+      if (parts.length > 2) {
+        filteredValue = parts[0] + '.' + parts.slice(1).join('');
+      }
+    }
+    
+    setFormData({ ...formData, [name]: filteredValue });
 
     const newWarnings = { ...warnings };
-    if (name === 'full_name') {
+    if (['full_name', 'target_designation', 'branch'].includes(name)) {
       if (/\d/.test(value)) {
-        newWarnings[name] = 'WARNING: Digits detected. Name should be alphabetic.';
+        newWarnings[name] = 'WARNING: Digits blocked. Alphabetic only.';
       } else {
         delete newWarnings[name];
       }
     } else if (['cgpa', 'internships_count', 'projects_count'].includes(name)) {
       if (/[a-zA-Z]/.test(value)) {
-        newWarnings[name] = 'WARNING: Alphabetic characters detected. Numeric input only.';
+        newWarnings[name] = 'WARNING: Alphabets blocked. Numeric only.';
       } else {
         delete newWarnings[name];
       }
@@ -193,6 +207,7 @@ export default function ProfileForm() {
                     className="w-full bg-black/50 border border-gray-800 focus:border-neon-cyan px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] focus:shadow-[0_0_15px_rgba(0,243,255,0.2)]"
                     placeholder="e.g., Software_Engineer"
                   />
+                  {warnings.target_designation && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {warnings.target_designation}</p>}
                 </div>
               </motion.div>
             )}
@@ -249,6 +264,7 @@ export default function ProfileForm() {
                     className="w-full bg-black/50 border border-gray-800 focus:border-neon-purple px-4 py-3 text-white placeholder:text-gray-800 focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(181,55,242,0.2)]"
                     placeholder="e.g., Computer_Science"
                   />
+                  {warnings.branch && <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest bg-red-900/20 px-2 py-1 border border-red-500/30 rounded inline-block w-full">! {warnings.branch}</p>}
                 </div>
               </motion.div>
             )}
@@ -327,7 +343,7 @@ export default function ProfileForm() {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || Object.keys(warnings).length > 0}
               className="group relative border border-neon-cyan bg-neon-cyan/10 hover:bg-neon-cyan/20 text-neon-cyan px-8 py-2 uppercase tracking-widest text-xs transition-all duration-300 flex items-center gap-3 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="absolute inset-0 w-full h-full bg-neon-cyan/20 -translate-x-full group-hover:animate-[scanline_1s_ease-in-out]" />
