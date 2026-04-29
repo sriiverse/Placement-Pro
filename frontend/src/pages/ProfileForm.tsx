@@ -4,6 +4,7 @@ import { Terminal, Database, Code2, ArrowRight, ShieldCheck, Loader2 } from 'luc
 import { cn } from '../lib/utils';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../context/ToastContext';
 
 const steps = [
   { id: 1, name: 'ID_CONFIG', icon: Terminal },
@@ -12,6 +13,7 @@ const steps = [
 ];
 
 export default function ProfileForm() {
+  const toast = useToast();
   const [activeStep, setActiveStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -55,34 +57,34 @@ export default function ProfileForm() {
   const handleNext = () => {
     if (activeStep === 1) {
       if (!formData.full_name || formData.full_name.trim() === '' || /[^a-zA-Z\s\-]/.test(formData.full_name)) {
-        alert("Invalid SYSTEM_USER input. Alphabets only allowed.");
+        toast.warning('VALIDATION_ERROR', 'Full name must contain alphabets only.');
         return;
       }
       if (!formData.target_designation || formData.target_designation.trim() === '' || /[^a-zA-Z\s\-]/.test(formData.target_designation)) {
-        alert("Invalid Target Designation input. Alphabets only allowed.");
+        toast.warning('VALIDATION_ERROR', 'Target designation must contain alphabets only.');
         return;
       }
     } else if (activeStep === 2) {
       const cgpaVal = parseFloat(formData.cgpa);
       if (!formData.cgpa || /[^\d.]/.test(formData.cgpa) || isNaN(cgpaVal) || cgpaVal < 0 || cgpaVal > 10) {
-        alert("Invalid CGPA input. CGPA must be a decimal value strictly between 0 and 10.");
+        toast.warning('VALIDATION_ERROR', 'CGPA must be a decimal value between 0 and 10.');
         return;
       }
       if (!formData.branch || formData.branch.trim() === '' || /[^a-zA-Z\s\-]/.test(formData.branch)) {
-        alert("Invalid Branch input. Alphabets only allowed.");
+        toast.warning('VALIDATION_ERROR', 'Branch must contain alphabets only.');
         return;
       }
     } else if (activeStep === 3) {
       if (!formData.skills || formData.skills.trim() === '') {
-        alert("Invalid Skills input. Must provide at least one skill.");
+        toast.warning('VALIDATION_ERROR', 'Provide at least one skill.');
         return;
       }
       if (!formData.internships_count || /[^\d]/.test(formData.internships_count) || parseInt(formData.internships_count) < 0) {
-        alert("Invalid Internships count. Digits only allowed.");
+        toast.warning('VALIDATION_ERROR', 'Internships count must be a non-negative number.');
         return;
       }
       if (!formData.projects_count || /[^\d]/.test(formData.projects_count) || parseInt(formData.projects_count) < 0) {
-        alert("Invalid Projects count. Digits only allowed.");
+        toast.warning('VALIDATION_ERROR', 'Projects count must be a non-negative number.');
         return;
       }
       handleSubmit();
@@ -93,6 +95,7 @@ export default function ProfileForm() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    toast.info('SUBMITTING_PROFILE', 'Connecting to AI engine...');
     try {
       const processedData = {
         ...formData,
@@ -105,11 +108,15 @@ export default function ProfileForm() {
       if (response.data && response.data.user_id) {
         localStorage.setItem('user_id', response.data.user_id.toString());
       }
-      
-      navigate('/dashboard');
-    } catch (error) {
+
+      toast.success('PROFILE_SAVED', 'Redirecting to your dashboard...');
+      setTimeout(() => navigate('/dashboard'), 800);
+    } catch (error: any) {
       console.error('Failed to submit profile:', error);
-      alert('SYSTEM_ERROR: Database connection failed.');
+      const msg = error?.response?.data?.errors?.[0] ||
+                  error?.response?.data?.message ||
+                  'Database connection failed.';
+      toast.error('SUBMISSION_FAILED', msg);
     } finally {
       setIsSubmitting(false);
     }

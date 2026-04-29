@@ -43,3 +43,11 @@ yarn-error.log*
 # ─── Documents & Presentations ──────────────────────────────────
 *.pptx
 *.pdf
+
+# ─── Docker ──────────────────────────────────────────────────────
+# Local override file for docker-compose (developer-specific settings)
+docker-compose.override.yml
+
+# ─── Logs (from structured logger) ──────────────────────────────
+logs/
+backend/logs/

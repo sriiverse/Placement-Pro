@@ -1,0 +1,19 @@
+# Node.js dependencies (re-installed during build)
+node_modules/
+
+# Vite build output (re-generated during build)
+dist/
+
+# Local environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# IDE / OS artifacts
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# TypeScript build info
+*.tsbuildinfo

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Target, Cpu, Activity, ShieldAlert, Crosshair, 
   ChevronRight, Zap, Lock, Map, TrendingUp,
-  AlertTriangle, CheckCircle, Clock, Building2, Loader2, Plus
+  AlertTriangle, CheckCircle, Clock, Building2, Loader2, Plus, Database
 } from 'lucide-react';
 import { 
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
@@ -11,6 +11,8 @@ import {
 } from 'recharts';
 import axios from 'axios';
 import { cn } from '../lib/utils';
+import { useToast } from '../context/ToastContext';
+import { StatCardSkeleton, CompanyCardSkeleton, ProbabilityRingSkeleton, SkillListSkeleton } from '../components/ui/Skeleton';
 
 const API = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') + '/api';
 
@@ -49,6 +51,7 @@ const TABS: { id: TabId; label: string; icon: typeof Target }[] = [
 ];
 
 export default function Dashboard() {
+  const toast = useToast();
   const [data, setData] = useState<DashboardData | null>(null);
   const [roadmap, setRoadmap] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,6 +59,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [simulatedSkills, setSimulatedSkills] = useState<string[]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [isCached, setIsCached] = useState(false);
 
   useEffect(() => {
     const userId = localStorage.getItem('user_id');
@@ -67,9 +71,20 @@ export default function Dashboard() {
     
     axios.post(`${API}/dashboard`, { user_id: userId_int })
       .then(res => {
-        if (res.data.status === 'success') setData(res.data);
+        if (res.data.status === 'success') {
+          setData(res.data);
+          setIsCached(!!res.data.cached);
+          if (res.data.cached) {
+            toast.cached('CACHE_HIT', 'Dashboard data served from cache');
+          } else {
+            toast.success('DATA_LOADED', 'AI analysis complete');
+          }
+        }
       })
-      .catch(err => console.error('Dashboard fetch error:', err))
+      .catch(err => {
+        console.error('Dashboard fetch error:', err);
+        toast.error('FETCH_FAILED', err?.response?.data?.message || 'Could not load dashboard data');
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -77,11 +92,20 @@ export default function Dashboard() {
     const userId = localStorage.getItem('user_id');
     if (!userId || roadmapLoading) return;
     setRoadmapLoading(true);
+    toast.info('GENERATING_ROADMAP', 'This may take a few seconds...');
     try {
       const res = await axios.post(`${API}/generate-roadmap`, { user_id: parseInt(userId) });
-      if (res.data.status === 'success') setRoadmap(res.data.roadmap);
-    } catch (e) {
+      if (res.data.status === 'success') {
+        setRoadmap(res.data.roadmap);
+        if (res.data.cached) {
+          toast.cached('ROADMAP_CACHED', '12-week plan loaded from cache');
+        } else {
+          toast.success('ROADMAP_READY', `${res.data.roadmap.length} weeks generated`);
+        }
+      }
+    } catch (e: any) {
       console.error(e);
+      toast.error('ROADMAP_FAILED', e?.response?.data?.message || 'Failed to generate roadmap');
     } finally {
       setRoadmapLoading(false);
     }
@@ -91,12 +115,11 @@ export default function Dashboard() {
     const userId = localStorage.getItem('user_id');
     if (!userId) return;
     setIsSimulating(true);
+    toast.info('SIMULATION_RUNNING', `Adding "${newSkill}" to skill matrix...`);
     
-    // Add new skill to simulated skills
     const updatedSkills = [...simulatedSkills, newSkill];
     setSimulatedSkills(updatedSkills);
     
-    // Combine original profile skills with simulated ones
     const baseSkills = data?.profile?.skills ? data.profile.skills.split(',').map((s: string) => s.trim()) : [];
     const combinedSkills = Array.from(new Set([...baseSkills, ...updatedSkills])).join(',');
 
@@ -109,9 +132,19 @@ export default function Dashboard() {
             companies: res.data.companies,
             skill_gap: res.data.skill_gap
           } : null);
+          const probDiff = res.data.prediction?.probability - (data?.prediction?.probability ?? 0);
+          toast.success(
+            'SIMULATION_COMPLETE',
+            probDiff > 0
+              ? `Probability +${probDiff.toFixed(1)}% with "${newSkill}"`
+              : `Simulation applied for "${newSkill}"`
+          );
         }
       })
-      .catch(err => console.error('Simulation error:', err))
+      .catch(err => {
+        console.error('Simulation error:', err);
+        toast.error('SIMULATION_FAILED', err?.response?.data?.message || 'Simulation request failed');
+      })
       .finally(() => setIsSimulating(false));
   };
 
@@ -132,11 +165,29 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full font-mono">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 text-neon-cyan animate-spin mx-auto" />
-          <p className="text-neon-cyan tracking-widest animate-pulse">LOADING_CORE_SYSTEMS...</p>
+      <div className="font-mono space-y-6">
+        {/* Skeleton header */}
+        <div className="flex justify-between items-end border-b border-neon-cyan/20 pb-4">
+          <div className="space-y-2">
+            <div className="h-8 w-64 bg-gray-900/60 border border-neon-cyan/10 animate-pulse" />
+            <div className="h-3 w-48 bg-gray-900/60 border border-neon-cyan/5 animate-pulse" />
+          </div>
         </div>
+        {/* Skeleton content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2"><ProbabilityRingSkeleton /></div>
+          <div className="space-y-4">
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+          <CompanyCardSkeleton />
+          <CompanyCardSkeleton />
+          <CompanyCardSkeleton />
+        </div>
+        <div className="mt-4"><SkillListSkeleton count={8} /></div>
       </div>
     );
   }
@@ -169,7 +220,18 @@ export default function Dashboard() {
             // USR: {data.profile?.full_name} | TARGET: {data.profile?.target_designation}
           </p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center">
+          {/* Cache hit indicator */}
+          {isCached && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-1.5 text-[10px] text-neon-cyan/60 border border-neon-cyan/20 px-2 py-1"
+            >
+              <Database className="w-3 h-3" />
+              CACHED
+            </motion.div>
+          )}
           <div className="cyber-panel px-4 py-2 flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 text-neon-pink" />
             <span className="text-neon-pink text-xs">SEC_LEVEL: ALPHA</span>

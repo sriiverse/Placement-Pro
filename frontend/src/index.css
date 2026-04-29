@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Custom keyframes ──────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes scanline {
+  0%   { transform: translateX(-100%); opacity: 0.4; }
+  50%  { opacity: 0.6; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
+}
+
 @layer base {
   body {
     @apply bg-[#030712] text-gray-300 font-sans tracking-wide overflow-x-hidden;

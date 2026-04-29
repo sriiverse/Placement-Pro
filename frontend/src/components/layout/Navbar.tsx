@@ -1,15 +1,23 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, UserCircle, Cpu } from 'lucide-react';
+import { LayoutDashboard, UserCircle, Cpu, LogOut } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const links = [
     { name: 'SYS.DASHBOARD', path: '/', icon: LayoutDashboard },
     { name: 'USR.PROFILE', path: '/profile', icon: UserCircle },
   ];
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <header className="relative z-50 w-full border-b border-neon-cyan/30 bg-surface/90 backdrop-blur-md">
@@ -20,7 +28,6 @@ export default function Navbar() {
         <div className="flex items-center space-x-3">
           <div className="relative p-2">
             <Cpu className="h-6 w-6 text-neon-cyan animate-pulse-glow" />
-            {/* Hexagon accent */}
             <svg className="absolute inset-0 w-full h-full text-neon-cyan/40 animate-[spin_10s_linear_infinite]" viewBox="0 0 100 100">
               <polygon points="50 3, 93 28, 93 72, 50 97, 7 72, 7 28" fill="none" stroke="currentColor" strokeWidth="2" />
             </svg>
@@ -40,7 +47,6 @@ export default function Navbar() {
           {links.map((link) => {
             const isActive = location.pathname === link.path;
             const Icon = link.icon;
-            
             return (
               <Link
                 key={link.path}
@@ -50,25 +56,13 @@ export default function Navbar() {
                   isActive ? "text-neon-cyan text-glow-cyan" : "text-gray-400 hover:text-neon-cyan"
                 )}
               >
-                {/* HUD Bracket Effects */}
                 {isActive && (
                   <>
-                    <motion.div
-                      layoutId="nav-bracket-left"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-4 border-l-2 border-y-2 border-neon-cyan"
-                    />
-                    <motion.div
-                      layoutId="nav-bracket-right"
-                      className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-4 border-r-2 border-y-2 border-neon-cyan"
-                    />
-                    {/* Glowing highlight under text */}
-                    <motion.div 
-                      layoutId="nav-bg"
-                      className="absolute inset-x-2 bottom-0 h-[2px] bg-neon-cyan blur-[2px]"
-                    />
+                    <motion.div layoutId="nav-bracket-left" className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-4 border-l-2 border-y-2 border-neon-cyan" />
+                    <motion.div layoutId="nav-bracket-right" className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-4 border-r-2 border-y-2 border-neon-cyan" />
+                    <motion.div layoutId="nav-bg" className="absolute inset-x-2 bottom-0 h-[2px] bg-neon-cyan blur-[2px]" />
                   </>
                 )}
-                
                 <Icon className={cn("h-4 w-4", isActive ? "animate-pulse-glow" : "")} />
                 <span>{link.name}</span>
               </Link>
@@ -76,21 +70,22 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* System Status Indicator */}
-        <div className="flex items-center space-x-3 font-mono text-xs">
-          <div className="flex flex-col text-right">
-            <span className="text-gray-400">SYS_LOAD</span>
-            <span className="text-neon-purple text-glow-purple">12.4%</span>
-          </div>
-          <div className="flex flex-col text-right">
-            <span className="text-gray-400">NETWORK</span>
-            <span className="text-neon-cyan text-glow-cyan">SECURE</span>
-          </div>
-          <div className="h-8 w-8 rounded-full border border-neon-cyan/50 flex items-center justify-center relative">
-            <div className="absolute inset-1 rounded-full border border-neon-cyan border-t-transparent animate-[spin_2s_linear_infinite]" />
-            <div className="absolute inset-2 rounded-full border border-neon-purple border-b-transparent animate-[spin_3s_linear_infinite_reverse]" />
-            <div className="h-2 w-2 bg-neon-cyan rounded-full animate-pulse-glow" />
-          </div>
+        {/* Right: Operator info + Logout */}
+        <div className="flex items-center space-x-4 font-mono text-xs">
+          {user && (
+            <div className="flex flex-col text-right">
+              <span className="text-gray-500 text-[10px]">OPERATOR</span>
+              <span className="text-neon-cyan truncate max-w-[160px]">{user.email}</span>
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            title="Logout"
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-neon-pink/40 text-neon-pink hover:bg-neon-pink/10 transition-all text-[10px] tracking-widest uppercase"
+          >
+            <LogOut className="w-3 h-3" />
+            EXIT
+          </button>
         </div>
       </div>
     </header>
