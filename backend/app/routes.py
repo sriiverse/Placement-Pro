@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from pydantic import ValidationError
 
 from .models import db, User
@@ -31,6 +32,7 @@ def _get_user_or_404(user_id: int):
 # ─── Phase 1: Profile Submission ─────────────────────────────────────────────
 @api_bp.route('/submit-profile', methods=['POST'])
 @limiter.limit("10 per minute")
+@jwt_required()
 def submit_profile():
     data = request.get_json(silent=True) or {}
 
@@ -51,6 +53,7 @@ def submit_profile():
             skills=','.join(validated.skills),
             internships_count=validated.internships_count,
             projects_count=validated.projects_count,
+            auth_user_id=int(get_jwt_identity())
         )
         db.session.add(new_user)
         db.session.commit()
@@ -77,6 +80,7 @@ def submit_profile():
 
 # ─── Phase 2: Placement Prediction ───────────────────────────────────────────
 @api_bp.route('/predict-placement', methods=['POST'])
+@jwt_required()
 def predict_placement():
     data = request.get_json(silent=True) or {}
 
@@ -109,6 +113,7 @@ def predict_placement():
 
 # ─── Phase 3: Company Recommendations ────────────────────────────────────────
 @api_bp.route('/recommend-companies', methods=['POST'])
+@jwt_required()
 def recommend_companies():
     data = request.get_json(silent=True) or {}
 
@@ -148,6 +153,7 @@ def recommend_companies():
 
 # ─── Phase 4: Skill Gap AI Analysis ──────────────────────────────────────────
 @api_bp.route('/skill-gap', methods=['POST'])
+@jwt_required()
 def analyze_skill_gap():
     data = request.get_json(silent=True) or {}
 
@@ -184,6 +190,7 @@ def analyze_skill_gap():
 # ─── Phase 5: AI Roadmap Generator ───────────────────────────────────────────
 @api_bp.route('/generate-roadmap', methods=['POST'])
 @limiter.limit("5 per minute")
+@jwt_required()
 def generate_roadmap():
     data = request.get_json(silent=True) or {}
 
@@ -219,6 +226,7 @@ def generate_roadmap():
 # ─── Phase 6: Full Dashboard Aggregate ───────────────────────────────────────
 @api_bp.route('/dashboard', methods=['POST'])
 @limiter.limit("30 per minute")
+@jwt_required()
 def get_dashboard():
     """Returns all data needed for the dashboard in a single request."""
     data = request.get_json(silent=True) or {}

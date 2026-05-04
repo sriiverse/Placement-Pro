@@ -9,6 +9,9 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 from flask import Flask, g, request, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from prometheus_flask_exporter import PrometheusMetrics
+from flasgger import Swagger
+from flask_talisman import Talisman
 
 from .models import db
 from .auth import bcrypt
@@ -24,6 +27,35 @@ apply_correlation_filter(logger)
 
 def create_app():
     app = Flask(__name__)
+
+    # ─── Observability & Docs ─────────────────────────────────────────────────
+    metrics = PrometheusMetrics(app)
+    metrics.info('app_info', 'PlacementPro API', version='2.0.0')
+    swagger = Swagger(app)
+
+    # ─── OWASP Security Headers (Flask-Talisman) ──────────────────────────────
+    # force_https=False because we terminate SSL at the reverse proxy / CDN
+    # (Render, Netlify, HuggingFace all enforce HTTPS upstream)
+    # The CSP allows unpkg.com so our Swagger UI CDN scripts still load.
+    Talisman(
+        app,
+        force_https=False,
+        strict_transport_security=True,
+        session_cookie_secure=not app.config.get("TESTING", False),
+        content_security_policy={
+            'default-src': "'self'",
+            'script-src': ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+            'style-src': ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+            'img-src': ["'self'", "data:"],
+            'connect-src': "'self'",
+        },
+        referrer_policy='strict-origin-when-cross-origin',
+        feature_policy={
+            'geolocation': "'none'",
+            'microphone': "'none'",
+            'camera': "'none'",
+        }
+    )
 
     # ─── Sentry Error Tracking ────────────────────────────────────────────────
     # SENTRY_DSN is read from environment. If not set, Sentry is disabled
@@ -154,6 +186,15 @@ def create_app():
     # ─── Health Check (Liveness) ──────────────────────────────────────────────
     @app.route('/health')
     def health_check():
+        """
+        Liveness Probe
+        ---
+        tags:
+          - Monitoring
+        responses:
+          200:
+            description: Returns the health status of the application
+        """
         return jsonify({"status": "healthy", "service": "placement-pro-core"}), 200
 
     # ─── Readiness Check (Deep Health) ────────────────────────────────────────

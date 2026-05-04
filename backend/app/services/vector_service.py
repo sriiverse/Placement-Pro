@@ -1,5 +1,6 @@
 import numpy as np
 from sentence_transformers import SentenceTransformer
+from functools import lru_cache
 
 class VectorService:
     def __init__(self, model_name='all-MiniLM-L6-v2'):
@@ -13,6 +14,11 @@ class VectorService:
         if not skills_list:
             return []
         return self.model.encode(skills_list)
+        
+    @lru_cache(maxsize=4096)
+    def _encode_single(self, skill_string: str):
+        """Memoized embedding generation for single skills to leverage high RAM."""
+        return self.model.encode([skill_string])[0]
         
     def _cosine_similarity(self, vec1, vec2):
         dot_product = np.dot(vec1, vec2)
@@ -41,7 +47,7 @@ class VectorService:
             if not clean_skill:
                 continue
                 
-            user_embedding = self.model.encode([clean_skill])[0]
+            user_embedding = self._encode_single(clean_skill)
             
             best_match = None
             best_score = -1
