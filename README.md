@@ -197,6 +197,78 @@ Placement-Pro/
 
 ---
 
+## 📐 Architecture Decision Records (ADRs)
+
+Key technical decisions and their rationale are documented inline. The most significant one:
+
+### ADR-001 · In-Process Cache (cachetools) vs. Distributed Cache (Redis)
+
+| | **Current: cachetools** | **Future: Redis** |
+|---|---|---|
+| **Latency** | ~100ns (dict lookup) | ~1ms (network RTT) |
+| **Infra cost** | Zero — no extra service | Redis container + config |
+| **Scope** | Single-instance ✅ | Multi-instance horizontal scale |
+| **Persistence** | Lost on restart (acceptable) | Survives restarts |
+| **Migration effort** | — | **3 file changes** (see below) |
+
+**Why cachetools now:** PlacementPro+ runs as a single Gunicorn container on Render/HuggingFace Spaces. All requests hit the same process, so in-process cache entries are always shared. The latency benefit of a local dict over a Redis socket is also meaningful for sub-100ms response targets.
+
+**The interface is already Redis-compatible.** The `_NamespacedCache.get()` / `.set()` / `.invalidate()` API was designed so the **only file that changes in a Redis migration is `cache.py`** — no routes, no services, no call sites need touching.
+
+**Redis upgrade path (3 steps):**
+
+```bash
+# 1. Add dependency
+pip install redis==5.x
+
+# 2. Set env var
+REDIS_URL=redis://redis:6379/0
+```
+
+```yaml
+# 3. Add to docker-compose.yml
+redis:
+  image: redis:7-alpine
+  command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+```
+
+The `_NamespacedCache` class in `backend/app/cache.py` contains the exact replacement implementation as a ready-to-use code block in its docstring.
+
+---
+
+## 🔭 Scaling Roadmap
+
+The system is designed to grow in well-defined stages without architectural rework:
+
+```
+Stage 1 (Current) — Single Instance
+  ┌─────────────────────────────────────────────┐
+  │  Render/HuggingFace  →  Gunicorn (1 worker) │
+  │  cachetools TTLCache (in-process)           │
+  │  SQLite → PostgreSQL (1-line env var swap)  │
+  └─────────────────────────────────────────────┘
+
+Stage 2 — Multi-Worker (when traffic > 100 RPS)
+  ┌─────────────────────────────────────────────┐
+  │  Gunicorn (N workers)  →  Redis (shared)    │
+  │  Only cache.py changes  (see ADR-001)       │
+  │  PostgreSQL with connection pooling         │
+  └─────────────────────────────────────────────┘
+
+Stage 3 — Async ML (when P99 latency > 500ms)
+  ┌─────────────────────────────────────────────┐
+  │  API → Celery worker pool → Redis broker    │
+  │  routes.py: predict.delay() instead of      │
+  │             predict() + WebSocket result    │
+  │  HuggingFace model served via TorchServe   │
+  └─────────────────────────────────────────────┘
+```
+
+> **Current status:** Comfortably in Stage 1. The `@lru_cache(maxsize=4096)` on vector embeddings and four TTL cache namespaces handle the full expected load for a university deployment without any additional infrastructure.
+
+---
+
 <p align="center">
   Built with mathematical precision by the <strong>sriiverse</strong> team · PlacementPro+ v2.0
 </p>
+

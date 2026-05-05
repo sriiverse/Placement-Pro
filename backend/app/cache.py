@@ -1,20 +1,79 @@
 """
 cache.py — Smart TTL-based in-memory cache for expensive AI computations.
 
-Design decisions:
-  - Uses cachetools.TTLCache (thread-safe via a RLock wrapper).
-  - Cache key is a stable hash of the user's profile fields so that any
-    profile update automatically invalidates that user's cached results.
-  - The interface is intentionally Redis-compatible: swap the backend by
-    changing the get/set implementation without touching any call sites.
-  - TTL values are environment-configurable so staging can use shorter
-    windows without code changes.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ADR-001: In-Process Cache (cachetools) vs. Distributed Cache (Redis)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Cached operations and their TTLs (default):
+STATUS:    Accepted — revisit if horizontal scaling is required.
+DATE:      2025-05-01
+CONTEXT:   PlacementPro+ deploys as a single-instance Gunicorn/Docker
+           container on Render.com / HuggingFace Spaces. The ML inference
+           workload (sentence-transformers + graph pathfinding) is CPU-bound
+           and benefits from caching its outputs.
+
+DECISION:  Use cachetools.TTLCache (in-process, single-node) instead of Redis.
+
+RATIONALE:
+  1. Zero infrastructure overhead — no Redis container, no broker config,
+     no additional service in docker-compose.yml.
+  2. Sub-microsecond latency — dictionary lookup vs ~1ms network round-trip
+     to a Redis socket.
+  3. Sufficient for single-instance deployments: all requests hit the same
+     process, so cache entries are always shared across concurrent workers
+     in a single Gunicorn worker-thread (sync workers share memory).
+  4. The API surface is intentionally Redis-compatible (see below), so the
+     migration cost to Redis is minimal when horizontal scaling is needed.
+
+CONSEQUENCES:
+  - Cache is NOT shared across multiple Gunicorn processes (multi-worker mode).
+    With sync workers and a single instance, this is not an issue.
+  - Cache is lost on process restart — TTL-based invalidation means this
+    causes at most one "cold" request per user per restart cycle.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REDIS UPGRADE PATH (when horizontal scaling is needed)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1 — Add Redis dependency:
+    pip install redis
+    # In requirements.txt:  redis==5.x
+
+Step 2 — Set env var in production:
+    REDIS_URL=redis://redis:6379/0
+
+Step 3 — Swap _NamespacedCache backend (ONLY change needed in this file):
+
+    import redis as _redis
+    _redis_client = _redis.from_url(os.environ.get("REDIS_URL", ""))
+
+    class _NamespacedCache:
+        def get(self, user, suffix=""):
+            return json.loads(_redis_client.get(self._key(user, suffix)) or "null")
+
+        def set(self, user, value, suffix=""):
+            _redis_client.setex(self._key(user, suffix), self._ttl, json.dumps(value))
+
+        def invalidate(self, user):
+            pattern = f"{self.name}:{self._user_fingerprint(user)}*"
+            for key in _redis_client.scan_iter(pattern):
+                _redis_client.delete(key)
+
+Step 4 — Add Redis service to docker-compose.yml:
+    redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+All call sites (routes.py) remain completely unchanged.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Cached operations and their TTLs (default, env-configurable):
   - predict_placement   : 10 min  (fast compute, changes with profile)
   - recommend_companies : 15 min  (pure heuristic, stable)
   - skill_gap_analysis  : 10 min  (NLP model — expensive)
   - roadmap             : 20 min  (most expensive — graph traversal + NLP)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
 import os
