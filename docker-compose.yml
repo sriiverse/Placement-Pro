@@ -1,6 +1,51 @@
 version: "3.9"
 
 services:
+  # ─── Redis: Distributed Cache (optional but included) ────────────────────────
+  # Activated automatically when backend has REDIS_URL set.
+  # To disable: comment out this service and remove REDIS_URL from backend env.
+  redis:
+    image: redis:7-alpine
+    container_name: placementpro-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+    ports:
+      - "6379:6379"
+    networks:
+      - placementpro-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ─── PostgreSQL: Production Database (optional, replaces SQLite) ──────────────
+  # Activated when DATABASE_URL is set to a postgres:// connection string.
+  # Remove or comment out this service to use the default SQLite backend.
+  postgres:
+    image: postgres:15-alpine
+    container_name: placementpro-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-placementpro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-placementpro_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-placementpro}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - placementpro-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-placementpro}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ─── Backend: Flask API ────────────────────────────────────────────────────
   backend:
     build:
@@ -13,19 +58,28 @@ services:
     environment:
       - PORT=5000
       - FLASK_ENV=production
+      # Redis: activates distributed cache when set
+      - REDIS_URL=redis://redis:6379/0
+      # PostgreSQL: overrides SQLite when set (comment out to use SQLite)
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-placementpro}:${POSTGRES_PASSWORD:-placementpro_secret}@postgres:5432/${POSTGRES_DB:-placementpro}
     ports:
       - "5000:5000"
     volumes:
-      # Persist the SQLite database across container restarts
+      # SQLite fallback persistence (used only if DATABASE_URL points to sqlite)
       - db_data:/home/user/app/app
     networks:
       - placementpro-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
   # ─── Frontend: React/Vite → nginx ─────────────────────────────────────────
   frontend:
@@ -33,7 +87,6 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # Tells Vite where the backend API lives at BUILD TIME
         VITE_API_URL: http://localhost:5000/api
     container_name: placementpro-frontend
     restart: unless-stopped
@@ -48,6 +101,8 @@ services:
 # ─── Volumes & Networks ───────────────────────────────────────────────────────
 volumes:
   db_data:
+    driver: local
+  pg_data:
     driver: local
 
 networks:
