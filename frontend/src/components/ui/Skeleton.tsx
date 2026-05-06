@@ -1,20 +1,23 @@
 import { cn } from '../../lib/utils';
+import type { CSSProperties } from 'react';
 
 interface SkeletonProps {
   className?: string;
+  style?: CSSProperties;
 }
 
 /**
  * Base skeleton block — pulsing neon-cyan shimmer.
  * Compose multiple together to mimic actual content layout.
  */
-export function Skeleton({ className }: SkeletonProps) {
+export function Skeleton({ className, style }: SkeletonProps) {
   return (
     <div
       className={cn(
         'relative overflow-hidden bg-gray-900/60 border border-neon-cyan/10',
         className
       )}
+      style={style}
     >
       {/* Shimmer sweep */}
       <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.6s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-neon-cyan/8 to-transparent" />
