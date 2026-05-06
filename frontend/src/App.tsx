@@ -50,7 +50,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Dashboard />} />
+        {/* Default landing: go straight to Profile so users can input data */}
+        <Route path="/" element={<Navigate to="/profile" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<ProfileForm />} />
       </Route>
