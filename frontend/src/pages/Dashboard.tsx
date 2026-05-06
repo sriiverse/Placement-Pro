@@ -14,7 +14,7 @@ import { cn } from '../lib/utils';
 import { useToast } from '../context/ToastContext';
 import { StatCardSkeleton, CompanyCardSkeleton, ProbabilityRingSkeleton, SkillListSkeleton } from '../components/ui/Skeleton';
 
-const API = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') + '/api';
+const API = (import.meta.env.VITE_API_URL || 'https://sriiverse-placement-pro-backend.hf.space/api').replace(/\/api\/?$/, '') + '/api';
 
 interface DashboardData {
   profile: any;

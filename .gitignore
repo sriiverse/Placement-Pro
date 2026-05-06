@@ -51,3 +51,18 @@ docker-compose.override.yml
 # ─── Logs (from structured logger) ──────────────────────────────
 logs/
 backend/logs/
+
+# ─── Temp & scratch scripts ──────────────────────────────────────
+hf_upload.py
+test_hf_api.py
+_temp_*.py
+generate_pdf.py
+update_ppt*.py
+_populate_ppt.py
+_create_fresh_ppt.py
+implementation_plan.md
+task_breakdown.md
+
+# ─── Coverage reports ────────────────────────────────────────────
+.coverage
+htmlcov/

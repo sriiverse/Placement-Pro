@@ -10,7 +10,7 @@ export default function Navbar() {
   const { user, logout } = useAuth();
 
   const links = [
-    { name: 'SYS.DASHBOARD', path: '/', icon: LayoutDashboard },
+    { name: 'SYS.DASHBOARD', path: '/dashboard', icon: LayoutDashboard },
     { name: 'USR.PROFILE', path: '/profile', icon: UserCircle },
   ];
 

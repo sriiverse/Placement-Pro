@@ -102,7 +102,7 @@ export default function ProfileForm() {
         skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean)
       };
 
-      const baseUrl = (import.meta.env.VITE_API_URL || 'https://vamsi25-placement-os.hf.space').replace(/\/api\/?$/, '');
+      const baseUrl = (import.meta.env.VITE_API_URL || 'https://sriiverse-placement-pro-backend.hf.space/api').replace(/\/api\/?$/, '');
       const response = await axios.post(`${baseUrl}/api/submit-profile`, processedData);
       
       if (response.data && response.data.user_id) {
