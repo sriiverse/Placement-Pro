@@ -27,7 +27,7 @@ EXPOSE 7860 5000
 
 # Health check — uses $PORT so it works on both HF (7860) and local (5000)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python -c "import urllib.request, os; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PORT\",7860)}/health')"
+    CMD python -c "import urllib.request, os; port = os.environ.get('PORT', 7860); urllib.request.urlopen('http://localhost:' + str(port) + '/health')"
 
 # PORT defaults to 7860 for HuggingFace Spaces.
 # Override with PORT=5000 in docker-compose.yml for local dev.
