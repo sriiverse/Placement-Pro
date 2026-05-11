@@ -110,7 +110,11 @@ def create_app():
 
     # ─── Create Tables ────────────────────────────────────────────────────────
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception as e:
+            # Handle race conditions in multi-worker environments (Gunicorn)
+            logger.warning(f"Database initialization race condition (safe to ignore): {e}")
 
     # ─── Register Blueprints ──────────────────────────────────────────────────
     from .routes import api_bp
