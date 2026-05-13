@@ -32,12 +32,16 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=5 \
 # PORT defaults to 7860 for HuggingFace Spaces.
 # Override with PORT=5000 in docker-compose.yml for local dev.
 ENV PORT=7860
+# --preload: initializes the Flask app ONCE in the master process before forking
+# workers. This guarantees db.create_all() runs exactly once, eliminating the
+# SQLite race condition where two workers simultaneously try to CREATE TABLE.
 CMD gunicorn \
     --workers 1 \
+    --preload \
     --bind "0.0.0.0:${PORT}" \
     --timeout 120 \
     --log-level info \
     --access-logfile - \
-    --error-logfile -\
+    --error-logfile - \
     run:app
 
