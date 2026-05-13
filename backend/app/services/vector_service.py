@@ -1,14 +1,23 @@
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from functools import lru_cache
 
 class VectorService:
     def __init__(self, model_name='all-MiniLM-L6-v2'):
         """
-        Initializes the Semantic Embedding model.
-        all-MiniLM-L6-v2 is an extremely fast ~80MB model perfect for CPU similarity tasks.
+        Lazy-loads the Semantic Embedding model on first use.
+        This prevents blocking the Gunicorn startup sequence.
+        all-MiniLM-L6-v2 is ~80MB and perfect for CPU similarity tasks.
         """
-        self.model = SentenceTransformer(model_name)
+        self._model_name = model_name
+        self._model = None  # Loaded on first use, not at startup
+
+    @property
+    def model(self):
+        """Lazy-load the model on first access."""
+        if self._model is None:
+            from sentence_transformers import SentenceTransformer
+            self._model = SentenceTransformer(self._model_name)
+        return self._model
     
     def encode_skills(self, skills_list):
         if not skills_list:

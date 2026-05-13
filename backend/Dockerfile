@@ -25,19 +25,19 @@ COPY --chown=user . .
 #   5000 → local Docker / docker-compose
 EXPOSE 7860 5000
 
-# Health check — uses $PORT so it works on both HF (7860) and local (5000)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+# Health check — longer start-period gives the container time to boot fully
+HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=5 \
     CMD python -c "import urllib.request, os; port = os.environ.get('PORT', 7860); urllib.request.urlopen('http://localhost:' + str(port) + '/health')"
 
 # PORT defaults to 7860 for HuggingFace Spaces.
 # Override with PORT=5000 in docker-compose.yml for local dev.
 ENV PORT=7860
 CMD gunicorn \
-    --workers 2 \
+    --workers 1 \
     --bind "0.0.0.0:${PORT}" \
     --timeout 120 \
     --log-level info \
     --access-logfile - \
-    --error-logfile - \
+    --error-logfile -\
     run:app
 
