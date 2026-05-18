@@ -507,15 +507,28 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               </div>
 
-              <div className="cyber-panel p-6 relative">
-                <div className="cyber-brackets" />
-                <h3 className="text-neon-purple tracking-widest text-xs mb-4 border-b border-neon-purple/20 pb-2">&gt; CURRENT.STRENGTHS</h3>
-                <div className="flex flex-wrap gap-2">
-                  {data.skill_gap?.strengths?.map(s => (
-                    <span key={s} className="flex items-center gap-1 text-xs bg-neon-purple/10 text-neon-purple border border-neon-purple/20 px-3 py-1">
-                      <CheckCircle className="w-3 h-3" /> {s}
-                    </span>
-                  ))}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="cyber-panel p-5 relative">
+                  <div className="cyber-brackets" />
+                  <h3 className="text-neon-purple tracking-widest text-[10px] mb-3 border-b border-neon-purple/20 pb-2">&gt; CURRENT_STRENGTHS</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {data.skill_gap?.strengths?.map(s => (
+                      <span key={s} className="flex items-center gap-1 text-[10px] bg-neon-purple/10 text-neon-purple border border-neon-purple/20 px-2 py-1">
+                        <CheckCircle className="w-3 h-3" /> {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="cyber-panel p-5 relative border-neon-pink/30 shadow-[0_0_15px_rgba(255,0,255,0.1)]">
+                  <div className="cyber-brackets border-neon-pink/40" />
+                  <h3 className="text-neon-pink tracking-widest text-[10px] mb-3 border-b border-neon-pink/20 pb-2">&gt; REQUIRED_TECHNOLOGIES</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {data.skill_gap?.missing_skills?.map(s => (
+                      <span key={s} className="flex items-center gap-1 text-[10px] bg-neon-pink/10 text-neon-pink border border-neon-pink/30 px-2 py-1 shadow-[0_0_8px_rgba(255,0,255,0.2)]">
+                        <AlertTriangle className="w-3 h-3" /> {s}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
